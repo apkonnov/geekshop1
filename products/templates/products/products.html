@@ -51,7 +51,7 @@
                     </a>
                 </div>
 
-                <div class="row">
+                <div class="row product_list">
 
                     {% for product in products %}
                         <div class="col-lg-4 col-md-6 mb-4">
@@ -69,9 +69,9 @@
                                     <p class="card-text">{{ product.text }}</p>
                                 </div>
                                 <div class="card-footer text-center">
-                                    <a href="{% url 'baskets:basket_add' product.id %}" class="btn btn-outline-success">
+                                    <button type="button" name="{{ product.id }}" class="btn btn-outline-success">
                                         Отправить в корзину
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -107,4 +107,8 @@
         </div>
         <!-- /.container -->
     </footer>
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'js/product.js' %}"></script>
 {% endblock %}
