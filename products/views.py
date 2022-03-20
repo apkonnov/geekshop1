@@ -1,10 +1,7 @@
 from django.shortcuts import render
-from django.conf import settings
-import json
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from products.models import ProductCategory, Product
-
-# Create your views here.
 
 
 def index(request):
@@ -12,12 +9,22 @@ def index(request):
     return render(request, 'products/index.html', context)
 
 
-def products(request):
-    # with open(settings.BASE_DIR / 'products/fixtures/products.json', 'r', encoding='utf-8') as f:
-    #     product_list = json.load(f)
+def products(request, category_id=None, page=1):
+    if category_id:
+        products = Product.objects.filter(category_id=category_id)
+    else:
+        products = Product.objects.all()
+
+    paginator = Paginator(products, 3)
+    try:
+        products_paginator = paginator.page(page)
+    except PageNotAnInteger:
+        products_paginator = paginator.page(1)
+    except EmptyPage:
+        products_paginator = paginator.page(paginator.num_pages)
 
     context = {'title': 'GeekShop - Продукты',
-               'products': Product.objects.all(),
-               'categories': ProductCategory.objects.all()
+               'categories': ProductCategory.objects.all(),
+               'products': products_paginator,
     }
     return render(request, 'products/products.html', context)

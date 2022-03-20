@@ -1,6 +1,9 @@
 from django.shortcuts import render, HttpResponseRedirect
-from django.urls import reverse
+from django.urls import reverse_lazy
 from django.contrib.auth.decorators import user_passes_test
+from django.utils.decorators import method_decorator
+from django.views.generic.list import ListView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
 
 from users.models import User
 from admins.forms import UserAdminRegistrationForm, UserAdminProfileForm
@@ -12,42 +15,60 @@ def index(request):
     return render(request, 'admins/index.html', context)
 
 
-@user_passes_test(lambda u: u.is_staff)
-def admin_users(request):
-    users = User.objects.all()
-    context = {'title': 'GeekShop - Admin', 'users': users}
-    return render(request, 'admins/admin-users-read.html', context)
+class TitleMixin:
+    title = None
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super(TitleMixin, self).get_context_data(object_list=None, **kwargs)
+        context['title'] = self.title
+        return context
 
 
-@user_passes_test(lambda u: u.is_staff)
-def admin_users_create(request):
-    if request.method == 'POST':
-        form = UserAdminRegistrationForm(data=request.POST, files=request.FILES)
-        if form.is_valid():
-            form.save()
-            return HttpResponseRedirect(reverse('admin_staff:admin_users'))
-    else:
-        form = UserAdminRegistrationForm()
-    context = {'title': 'GeekShop - Admin', 'form': form}
-    return render(request, 'admins/admin-users-create.html', context)
+class UserAdminListView(TitleMixin, ListView):
+    model = User
+    template_name = 'admins/admin-users-read.html'
+    title = 'GeekShop - Admin'
+
+    @method_decorator(user_passes_test(lambda u: u.is_staff))
+    def dispatch(self, request, *args, **kwargs):
+        return super(UserAdminListView, self).dispatch(request, *args, **kwargs)
 
 
-@user_passes_test(lambda u: u.is_staff)
-def admin_users_update(request, id):
-    selected_user = User.objects.get(id=id)
-    if request.method == 'POST':
-        form = UserAdminProfileForm(instance=selected_user, files=request.FILES, data=request.POST)
-        if form.is_valid():
-            form.save()
-            return HttpResponseRedirect(reverse('admin_staff:admin_users'))
-    else:
-        form = UserAdminProfileForm(instance=selected_user)
-    context = {'title': 'GeekShop - Admin', 'form': form, 'selected_user': selected_user}
-    return render(request, 'admins/admin-users-update-delete.html', context)
+class UserAdminCreateView(TitleMixin, CreateView):
+    model = User
+    form_class = UserAdminRegistrationForm
+    template_name = 'admins/admin-users-create.html'
+    success_url = reverse_lazy('admin_staff:admin_users')
+    title = 'GeekShop - Admin'
+
+    @method_decorator(user_passes_test(lambda u: u.is_staff))
+    def dispatch(self, request, *args, **kwargs):
+        return super(UserAdminCreateView, self).dispatch(request, *args, **kwargs)
 
 
-@user_passes_test(lambda u: u.is_staff)
-def admin_users_delete(request, id):
-    user = User.objects.get(id=id)
-    user.safe_delete()
-    return HttpResponseRedirect(reverse('admin_staff:admin_users'))
+class UserAdminUpdateView(TitleMixin, UpdateView):
+    model = User
+    form_class = UserAdminProfileForm
+    template_name = 'admins/admin-users-update-delete.html'
+    success_url = reverse_lazy('admin_staff:admin_users')
+    title = 'GeekShop - Admin'
+
+    @method_decorator(user_passes_test(lambda u: u.is_staff))
+    def dispatch(self, request, *args, **kwargs):
+        return super(UserAdminUpdateView, self).dispatch(request, *args, **kwargs)
+
+
+class UserAdminDeleteView(TitleMixin, DeleteView):
+    model = User
+    template_name = 'admins/admin-users-update-delete.html'
+    success_url = reverse_lazy('admin_staff:admin_users')
+    title = 'GeekShop - Admin'
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.safe_delete()
+        return HttpResponseRedirect(self.success_url)
+
+    @method_decorator(user_passes_test(lambda u: u.is_staff))
+    def dispatch(self, request, *args, **kwargs):
+        return super(UserAdminDeleteView, self).dispatch(request, *args, **kwargs)
